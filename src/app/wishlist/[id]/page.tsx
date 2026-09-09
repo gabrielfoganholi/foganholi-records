@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import DiscForm from "@/components/DiscForm";
 import Link from "next/link";
 
 export default function WishlistItemDetails() {
@@ -10,25 +11,26 @@ export default function WishlistItemDetails() {
   const router = useRouter();
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const fetchItem = async () => {
+    if (!params.id) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("wishlist")
+      .select("*")
+      .eq("id", params.id)
+      .single();
+
+    if (error) {
+      console.error("Erro ao buscar item da wishlist:", error);
+    } else {
+      setItem(data);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    async function fetchItem() {
-      if (!params.id) return;
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("wishlist")
-        .select("*")
-        .eq("id", params.id)
-        .single();
-
-      if (error) {
-        console.error("Erro ao buscar item da wishlist:", error);
-      } else {
-        setItem(data);
-      }
-      setLoading(false);
-    }
-
     fetchItem();
   }, [params.id]);
 
@@ -48,21 +50,41 @@ export default function WishlistItemDetails() {
   };
 
   if (loading) {
-    return (
-      <div className="text-center py-12 text-parchment/60">
-        Carregando detalhes...
-      </div>
-    );
+    return <div className="text-center py-12 text-parchment/60">Carregando detalhes...</div>;
   }
 
   if (!item) {
     return (
-      <div className="text-center py-12 text-parchment/60">
-        Item não encontrado.
-        <br />
-        <Link href="/wishlist" className="text-amber-500 hover:underline mt-4 inline-block">
+      <div className="text-center py-12 text-parchment/60 space-y-4">
+        <p>Item não encontrado na sua Wishlist.</p>
+        <Link href="/wishlist" className="text-amber-500 hover:underline block">
           ← Voltar para Wishlist
         </Link>
+      </div>
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setIsEditing(false)}
+            className="text-sm text-parchment/60 hover:text-parchment transition"
+          >
+            ← Cancelar Edição
+          </button>
+        </div>
+
+        <DiscForm
+          mode="edit"
+          table="wishlist"
+          initialData={item}
+          onSuccess={() => {
+            setIsEditing(false);
+            fetchItem();
+          }}
+        />
       </div>
     );
   }
@@ -77,6 +99,12 @@ export default function WishlistItemDetails() {
           ← Voltar para Wishlist
         </Link>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsEditing(true)}
+            className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 px-4 py-2 rounded-xl text-sm transition font-semibold"
+          >
+            ✏️ Editar
+          </button>
           <button
             onClick={handleDelete}
             className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-4 py-2 rounded-xl text-sm transition font-semibold"

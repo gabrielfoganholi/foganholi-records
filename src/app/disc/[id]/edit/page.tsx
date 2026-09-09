@@ -17,7 +17,7 @@ export default function DiscDetailPage() {
       setLoading(true);
 
       const { data, error } = await supabase
-        .from("discs") // <--- Busca explicitamente na tabela 'discs'
+        .from("discs")
         .select("*")
         .eq("id", params.id)
         .single();

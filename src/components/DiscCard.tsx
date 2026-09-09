@@ -10,7 +10,7 @@ interface DiscCardProps {
     purchase_price?: number;
     estimated_value?: number;
   };
-  baseUrl?: "/disc" | "/wishlist"; // Define a rota base (padrão: /disc)
+  baseUrl?: "/disc" | "/wishlist";
 }
 
 export default function DiscCard({ disc, baseUrl = "/disc" }: DiscCardProps) {

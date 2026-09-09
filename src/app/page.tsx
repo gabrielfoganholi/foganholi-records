@@ -1,146 +1,75 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import DiscList from "@/components/DiscList";
-import CollectionStats from "@/components/CollectionStats";
-import FilterBar from "@/components/FilterBar";
-import RandomPickModal from "@/components/RandomPickModal";
+import DiscCard from "@/components/DiscCard";
 
-export default function HomePage() {
-  const router = useRouter();
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const [discs, setDiscs] = useState<any[]>([]);
+export default function WishlistPage() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Estados para busca e filtros
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedGenre, setSelectedGenre] = useState("");
-  const [selectedFormat, setSelectedFormat] = useState("");
+  const fetchWishlist = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("wishlist")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-  // Estado para o Modal do Sorteio Aleatório
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [randomDisc, setRandomDisc] = useState<any>(null);
-
-  useEffect(() => {
-    // 1. Escuta mudanças na autenticação do Supabase
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session) {
-          router.push("/login");
-        } else {
-          setCheckingAuth(false);
-          fetchDiscs();
-        }
-      }
-    );
-
-    // 2. Verificação inicial da sessão
-    const initAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        router.push("/login");
-      } else {
-        setCheckingAuth(false);
-        fetchDiscs();
-      }
-    };
-
-    initAuth();
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [router]);
-
-  // Função para carregar os discos do banco de dados
-  const fetchDiscs = async () => {
-    const { data, error } = await supabase
-      .from("discs")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (!error && data) {
-      setDiscs(data);
+      if (error) throw error;
+      setItems(data || []);
+    } catch (err: any) {
+      console.error("Erro ao carregar wishlist:", err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Lógica de filtragem em tempo real (Artista/Banda, Título, Gravadora, Gênero e Formato)
-  const filteredDiscs = useMemo(() => {
-    return discs.filter((disc) => {
-      const query = searchQuery.toLowerCase().trim();
+  useEffect(() => {
+    fetchWishlist();
+  }, []);
 
-      const matchesSearch =
-        !query ||
-        disc.title?.toLowerCase().includes(query) ||
-        disc.artist?.toLowerCase().includes(query) ||
-        disc.label?.toLowerCase().includes(query);
-
-      const matchesGenre = !selectedGenre || disc.genre === selectedGenre;
-      const matchesFormat = !selectedFormat || disc.format === selectedFormat;
-
-      return matchesSearch && matchesGenre && matchesFormat;
-    });
-  }, [discs, searchQuery, selectedGenre, selectedFormat]);
-
-  // Função para sortear um disco entre os filtrados
-  const handleRandomPick = () => {
-    if (filteredDiscs.length === 0) return;
-    const randomIndex = Math.floor(Math.random() * filteredDiscs.length);
-    setRandomDisc(filteredDiscs[randomIndex]);
-    setIsModalOpen(true);
-  };
-
-  if (checkingAuth) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-amber-500 text-sm font-semibold animate-pulse">
-          Carregando sua coleção...
-        </p>
-      </div>
-    );
-  }
+  const totalTarget = items.reduce((acc, curr) => acc + (Number(curr.purchase_price) || 0), 0);
+  const totalEstimated = items.reduce((acc, curr) => acc + (Number(curr.estimated_value) || 0), 0);
 
   return (
-    <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-      {/* DASHBOARD COM ESTATÍSTICAS DO ACERVO */}
-      <CollectionStats discs={discs} />
-
-      {/* BARRA DE BUSCA, FILTROS E BOTÃO DE SORTEIO */}
-      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between bg-[#1c1613] border border-[#3d2d26] p-4 rounded-2xl shadow-md">
-        <FilterBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedGenre={selectedGenre}
-          setSelectedGenre={setSelectedGenre}
-          selectedFormat={selectedFormat}
-          setSelectedFormat={setSelectedFormat}
-          genres={Array.from(
-            new Set(discs.map((d) => d.genre).filter(Boolean))
-          )}
-          formats={Array.from(
-            new Set(discs.map((d) => d.format).filter(Boolean))
-          )}
-        />
-
-        <button
-          onClick={handleRandomPick}
-          className="bg-amber-500 hover:bg-amber-400 text-walnut-950 font-bold px-5 py-2.5 rounded-xl text-sm transition flex items-center justify-center gap-2 whitespace-nowrap shadow-md active:scale-95"
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#1c1613] p-6 rounded-2xl border border-[#3d2d26]">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-parchment">Wishlist / Lista de Desejos</h1>
+          <p className="text-xs text-parchment/60 mt-1">
+            Total na lista: <span className="text-amber-500 font-bold">{items.length} discos</span>
+            {totalTarget > 0 && (
+              <span> • Meta Total: <span className="text-emerald-400 font-bold">R$ {totalTarget.toFixed(2)}</span></span>
+            )}
+            {totalEstimated > 0 && (
+              <span> • Est. Mercado: <span className="text-amber-400 font-bold">R$ {totalEstimated.toFixed(2)}</span></span>
+            )}
+          </p>
+        </div>
+        <Link
+          href="/wishlist/new"
+          className="bg-amber-500 hover:bg-amber-400 text-walnut-950 font-bold px-4 py-2.5 rounded-xl text-sm transition text-center shadow-md"
         >
-          <span>🎲</span> O que ouvir hoje?
-        </button>
+          + Adicionar à Wishlist
+        </Link>
       </div>
 
-      {/* GRID DE DISCOS EXIBINDO OS RESULTADOS */}
-      <DiscList discs={filteredDiscs} />
-
-      {/* MODAL DO SORTEIO ALEATÓRIO */}
-      <RandomPickModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        disc={randomDisc}
-        onPickAgain={handleRandomPick}
-      />
-    </main>
+      {loading ? (
+        <p className="text-center py-12 text-sm text-parchment/60">Carregando sua lista de desejos...</p>
+      ) : items.length === 0 ? (
+        <div className="text-center py-16 bg-[#1c1613] rounded-2xl border border-[#3d2d26] space-y-3">
+          <p className="text-4xl">🖤</p>
+          <p className="text-sm text-parchment/70">Sua Lista de Desejos está vazia.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {items.map((item) => (
+            <DiscCard key={item.id} disc={item} baseUrl="/wishlist" />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
