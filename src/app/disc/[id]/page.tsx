@@ -3,93 +3,71 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import DiscForm from "@/components/DiscForm";
 import Link from "next/link";
 
-export default function WishlistItemDetails() {
+export default function DiscDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [item, setItem] = useState<any>(null);
+  const [disc, setDisc] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-
-  const fetchItem = async () => {
-    if (!params.id) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("wishlist")
-      .select("*")
-      .eq("id", params.id)
-      .single();
-
-    if (error) {
-      console.error("Erro ao buscar item da wishlist:", error);
-    } else {
-      setItem(data);
-    }
-    setLoading(false);
-  };
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchItem();
-  }, [params.id]);
+    async function fetchDisc() {
+      if (!params?.id) return;
+      setLoading(true);
+      setErrorMsg(null);
+
+      // Tratamento para garantir suporte a IDs numéricos ou string (UUID)
+      const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
+      const parsedId = isNaN(Number(rawId)) ? rawId : Number(rawId);
+
+      const { data, error } = await supabase
+        .from("discs") // <--- Busca estritamente na tabela da coleção
+        .select("*")
+        .eq("id", parsedId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Erro ao buscar disco na coleção:", error);
+        setErrorMsg(error.message);
+      } else {
+        setDisc(data);
+      }
+      setLoading(false);
+    }
+
+    fetchDisc();
+  }, [params?.id]);
 
   const handleDelete = async () => {
-    if (!confirm("Tem certeza que deseja remover este item da Wishlist?")) return;
+    if (!disc) return;
+    if (!confirm("Tem certeza que deseja remover este disco da sua coleção?")) return;
 
     const { error } = await supabase
-      .from("wishlist")
+      .from("discs")
       .delete()
-      .eq("id", item.id);
+      .eq("id", disc.id);
 
     if (error) {
       alert("Erro ao excluir: " + error.message);
     } else {
-      router.push("/wishlist");
+      router.push("/");
     }
   };
 
   if (loading) {
-    return (
-      <div className="text-center py-12 text-parchment/60">
-        Carregando detalhes...
-      </div>
-    );
+    return <div className="text-center py-12 text-parchment/60">Carregando informações do disco...</div>;
   }
 
-  if (!item) {
+  if (!disc) {
     return (
-      <div className="text-center py-12 text-parchment/60">
-        Item não encontrado.
-        <br />
-        <Link href="/wishlist" className="text-amber-500 hover:underline mt-4 inline-block">
-          ← Voltar para Wishlist
+      <div className="text-center py-12 text-parchment/60 space-y-4">
+        <p className="text-lg font-semibold text-rose-400">Item não encontrado na sua coleção.</p>
+        {errorMsg && <p className="text-xs text-parchment/40">Detalhes: {errorMsg}</p>}
+        <Link href="/" className="text-amber-500 hover:underline block font-medium">
+          ← Voltar para a Coleção
         </Link>
-      </div>
-    );
-  }
-
-  if (isEditing) {
-    return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setIsEditing(false)}
-            className="text-sm text-parchment/60 hover:text-parchment transition"
-          >
-            ← Cancelar Edição
-          </button>
-        </div>
-
-        <DiscForm
-          mode="edit"
-          table="wishlist"
-          initialData={item}
-          onSuccess={() => {
-            setIsEditing(false);
-            fetchItem();
-          }}
-        />
       </div>
     );
   }
@@ -97,19 +75,16 @@ export default function WishlistItemDetails() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <Link
-          href="/wishlist"
-          className="text-sm text-parchment/60 hover:text-parchment transition"
-        >
-          ← Voltar para Wishlist
+        <Link href="/" className="text-sm text-parchment/60 hover:text-parchment transition">
+          ← Voltar para a Coleção
         </Link>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsEditing(true)}
+          <Link
+            href={`/disc/${disc.id}/edit`}
             className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 px-4 py-2 rounded-xl text-sm transition font-semibold"
           >
             ✏️ Editar
-          </button>
+          </Link>
           <button
             onClick={handleDelete}
             className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-4 py-2 rounded-xl text-sm transition font-semibold"
@@ -120,10 +95,10 @@ export default function WishlistItemDetails() {
       </div>
 
       <div className="bg-[#1c1613] border border-[#3d2d26] rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row gap-6">
-        {item.cover_url ? (
+        {disc.cover_url ? (
           <img
-            src={item.cover_url}
-            alt={item.title}
+            src={disc.cover_url}
+            alt={disc.title}
             className="w-full sm:w-64 h-64 object-cover rounded-xl border border-[#3d2d26] flex-shrink-0"
           />
         ) : (
@@ -134,26 +109,26 @@ export default function WishlistItemDetails() {
 
         <div className="flex-1 space-y-4">
           <div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              Wishlist
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Na Coleção
             </span>
             <h1 className="text-2xl sm:text-3xl font-display font-bold text-parchment mt-2">
-              {item.title}
+              {disc.title}
             </h1>
-            <p className="text-lg text-amber-500 font-medium">{item.artist}</p>
+            <p className="text-lg text-amber-500 font-medium">{disc.artist}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 pt-2">
             <div className="bg-[#120e0c] border border-[#2a1f1a] p-3 rounded-xl">
-              <p className="text-xs text-parchment/60">Preço Meta / Compra</p>
+              <p className="text-xs text-parchment/60">Preço Pago</p>
               <p className="text-lg font-bold text-emerald-400">
-                R$ {Number(item.purchase_price || 0).toFixed(2)}
+                R$ {Number(disc.purchase_price || 0).toFixed(2)}
               </p>
             </div>
             <div className="bg-[#120e0c] border border-[#2a1f1a] p-3 rounded-xl">
-              <p className="text-xs text-parchment/60">Valor Estimado de Mercado</p>
+              <p className="text-xs text-parchment/60">Valor Estimado</p>
               <p className="text-lg font-bold text-amber-400">
-                R$ {Number(item.estimated_value || 0).toFixed(2)}
+                R$ {Number(disc.estimated_value || 0).toFixed(2)}
               </p>
             </div>
           </div>
@@ -161,31 +136,37 @@ export default function WishlistItemDetails() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm pt-2 border-t border-[#2a1f1a]">
             <div>
               <p className="text-xs text-parchment/50">Ano</p>
-              <p className="font-semibold text-parchment">{item.year || "N/I"}</p>
+              <p className="font-semibold text-parchment">{disc.year || "N/I"}</p>
             </div>
             <div>
               <p className="text-xs text-parchment/50">Formato</p>
-              <p className="font-semibold text-parchment">{item.format || "Vinil"}</p>
+              <p className="font-semibold text-parchment">{disc.format || "Vinil"}</p>
             </div>
             <div>
               <p className="text-xs text-parchment/50">Gênero</p>
-              <p className="font-semibold text-parchment">{item.genre || "N/I"}</p>
+              <p className="font-semibold text-parchment">{disc.genre || "N/I"}</p>
             </div>
             <div>
               <p className="text-xs text-parchment/50">Gravadora</p>
-              <p className="font-semibold text-parchment">{item.label || "N/I"}</p>
+              <p className="font-semibold text-parchment">{disc.label || "N/I"}</p>
             </div>
             <div>
-              <p className="text-xs text-parchment/50">Mídia Recomendada</p>
-              <p className="font-semibold text-parchment">{item.media_condition || "N/I"}</p>
+              <p className="text-xs text-parchment/50">Condição</p>
+              <p className="font-semibold text-parchment">{disc.media_condition || "N/I"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-parchment/50">Avaliação</p>
+              <p className="font-semibold text-parchment">
+                {"⭐".repeat(disc.rating || 5)} ({disc.rating || 5}/5)
+              </p>
             </div>
           </div>
 
-          {item.notes && (
+          {disc.notes && (
             <div className="pt-2 border-t border-[#2a1f1a]">
               <p className="text-xs text-parchment/50 mb-1">Anotações</p>
               <p className="text-sm text-parchment/80 whitespace-pre-line bg-[#120e0c] p-3 rounded-xl border border-[#2a1f1a]">
-                {item.notes}
+                {disc.notes}
               </p>
             </div>
           )}
