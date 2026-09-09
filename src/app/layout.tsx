@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/contexts/AuthContext";
-import "@/app/globals.css";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Foganholi Records",
@@ -16,9 +16,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="pt-BR" className="overflow-x-hidden">
       <body className="bg-walnut-950 text-parchment min-h-screen overflow-x-hidden antialiased">

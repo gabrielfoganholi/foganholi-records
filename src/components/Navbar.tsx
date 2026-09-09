@@ -18,7 +18,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-walnut-700 bg-walnut-950/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-walnut-700 bg-walnut-950/95 backdrop-blur w-full">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
@@ -27,7 +27,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Botão Hambúrguer - Visível por padrão em telas pequenas */}
+        {/* Botão Hambúrguer (Mobile) */}
         <button
           onClick={() => setIsOpen(!isOpen)}
           type="button"
@@ -45,7 +45,7 @@ export default function Navbar() {
           )}
         </button>
 
-        {/* Links do Desktop - Escondidos no mobile */}
+        {/* Links Desktop */}
         <nav className="hidden sm:flex items-center gap-1">
           {links.map((link) => {
             const active = pathname === link.href;
