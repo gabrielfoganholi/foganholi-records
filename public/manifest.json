@@ -1,0 +1,19 @@
+{
+  "name": "Foganholi Records",
+  "short_name": "Foganholi",
+  "description": "Coleção de discos de vinil e CDs da família Foganholi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#171009",
+  "theme_color": "#171009",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
