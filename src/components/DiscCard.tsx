@@ -10,12 +10,13 @@ interface DiscCardProps {
     purchase_price?: number;
     estimated_value?: number;
   };
+  baseUrl?: "/disc" | "/wishlist"; // Define a rota base (padrão: /disc)
 }
 
-export default function DiscCard({ disc }: DiscCardProps) {
+export default function DiscCard({ disc, baseUrl = "/disc" }: DiscCardProps) {
   return (
     <div className="bg-[#1c1613] border border-[#3d2d26] rounded-2xl p-4 flex flex-col justify-between hover:border-amber-500/50 transition group">
-      <Link href={`/disc/${disc.id}`} className="space-y-3 block">
+      <Link href={`${baseUrl}/${disc.id}`} className="space-y-3 block">
         <div className="aspect-square bg-[#120e0c] rounded-xl overflow-hidden relative">
           <img
             src={disc.cover_url || "/placeholder.png"}
@@ -31,7 +32,7 @@ export default function DiscCard({ disc }: DiscCardProps) {
 
       <div className="mt-4 pt-3 border-t border-[#2a1f1a] flex justify-between items-center text-xs">
         <div>
-          <span className="block text-[10px] text-parchment/50">Pago</span>
+          <span className="block text-[10px] text-parchment/50">Pago / Meta</span>
           <span className="text-emerald-400 font-bold">
             R$ {Number(disc.purchase_price || 0).toFixed(2)}
           </span>
