@@ -1,132 +1,112 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { signIn, signUp } = useAuth();
-  
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { signIn, signUp } = useAuth();
+  const router = useRouter();
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setInfo(null);
     setLoading(true);
+    setError("");
 
     try {
-      const action = mode === "signin" ? signIn : signUp;
-      const res = await action(email, password);
-
-      // Tratamento de erros do Supabase/AuthContext
+      const res: any = await signIn(email, password);
       if (res?.error) {
-        setError(typeof res.error === "string" ? res.error : res.error.message);
+        const errObj = res.error;
+        setError(typeof errObj === "string" ? errObj : errObj?.message || "Erro ao fazer login.");
         setLoading(false);
         return;
       }
-
-      if (mode === "signup") {
-        setInfo(
-          "Conta criada! Se a confirmação por e-mail estiver ativa no Supabase, verifique sua caixa de entrada antes de entrar."
-        );
-        setLoading(false);
-      } else {
-        // Redirecionamento forçado para a página principal ao logar com sucesso
-        router.push("/");
-        router.refresh();
-      }
+      router.push("/");
     } catch (err: any) {
-      setError(err.message || "Ocorreu um erro ao tentar autenticar.");
+      setError(err.message || "Erro inesperado.");
       setLoading(false);
     }
-  }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const res: any = await signUp(email, password);
+      if (res?.error) {
+        const errObj = res.error;
+        setError(typeof errObj === "string" ? errObj : errObj?.message || "Erro ao cadastrar.");
+        setLoading(false);
+        return;
+      }
+      alert("Cadastro realizado! Verifique seu e-mail ou faça login.");
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || "Erro inesperado.");
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#090D16] px-4 text-slate-100">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <span className="text-4xl">🎵</span>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-slate-100">
-            Foganholi Records
-          </h1>
-          <p className="mt-1 text-xs text-slate-400">
-            A coleção da família, sempre à mão.
-          </p>
-        </div>
+    <div className="min-h-[80vh] flex items-center justify-center">
+      <div className="bg-slate-800 p-8 rounded-xl border border-slate-700 shadow-xl w-full max-w-md">
+        <h1 className="text-2xl font-bold text-white mb-6 text-center">Foganholi Records</h1>
 
-        <form
-          onSubmit={handleSubmit}
-          className="card-wood flex flex-col gap-4 p-6 shadow-2xl"
-        >
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-slate-300">E-mail</span>
+        {error && (
+          <div className="bg-rose-950/80 border border-rose-800 text-rose-300 p-3 rounded-lg text-sm mb-4">
+            {error}
+          </div>
+        )}
+
+        <form className="space-y-4">
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">E-mail</label>
             <input
               type="email"
-              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500"
               placeholder="seu@email.com"
-              className="input"
+              required
             />
-          </label>
+          </div>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-slate-300">Senha</span>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Senha</label>
             <input
               type="password"
-              required
-              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500"
               placeholder="••••••••"
-              className="input"
+              required
             />
-          </label>
+          </div>
 
-          {error && (
-            <p className="rounded-lg border border-rose-800/80 bg-rose-950/40 p-3 text-xs text-rose-300">
-              {error}
-            </p>
-          )}
-
-          {info && (
-            <p className="rounded-lg border border-emerald-800/80 bg-emerald-950/40 p-3 text-xs text-emerald-300">
-              {info}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 rounded-xl bg-amber-500 py-2.5 text-sm font-semibold text-slate-950 transition-all hover:bg-amber-400 active:scale-[0.98] disabled:opacity-50"
-          >
-            {loading
-              ? "Aguarde..."
-              : mode === "signin"
-              ? "Entrar"
-              : "Criar conta"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMode(mode === "signin" ? "signup" : "signin");
-              setError(null);
-              setInfo(null);
-            }}
-            className="text-xs text-slate-400 transition-colors hover:text-amber-400"
-          >
-            {mode === "signin"
-              ? "Ainda não tem conta? Criar uma"
-              : "Já tem conta? Fazer login"}
-          </button>
+          <div className="flex gap-4 pt-2">
+            <button
+              type="submit"
+              onClick={handleSignIn}
+              disabled={loading}
+              className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              onClick={handleSignUp}
+              disabled={loading}
+              className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              Cadastrar
+            </button>
+          </div>
         </form>
       </div>
     </div>
