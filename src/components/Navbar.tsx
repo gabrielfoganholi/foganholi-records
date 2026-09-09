@@ -22,27 +22,24 @@ export default function Navbar() {
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <span className="font-display text-lg font-bold tracking-tight text-parchment sm:text-xl">
+          <span className="font-display text-lg font-bold tracking-tight text-parchment">
             Foganholi Records
           </span>
         </Link>
 
-        {/* Botão Hambúrguer (Apenas no Mobile) */}
+        {/* Botão Hambúrguer (Visível no celular e tablet) */}
         <button
           onClick={() => setIsOpen(!isOpen)}
           type="button"
-          className="inline-flex items-center justify-center rounded-lg p-2 text-parchment/80 hover:bg-walnut-800 hover:text-parchment focus:outline-none sm:hidden"
-          aria-controls="mobile-menu"
+          className="inline-flex items-center justify-center rounded-lg p-2 text-parchment/80 hover:bg-walnut-800 hover:text-parchment focus:outline-none md:hidden"
           aria-expanded={isOpen}
         >
           <span className="sr-only">Abrir menu</span>
           {isOpen ? (
-            /* Ícone de Fechar (X) */
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            /* Ícone de Hambúrguer (≡) */
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
             </svg>
@@ -50,7 +47,7 @@ export default function Navbar() {
         </button>
 
         {/* Links no Desktop */}
-        <nav className="hidden items-center gap-1 sm:flex">
+        <nav className="hidden items-center gap-1 md:flex">
           {links.map((link) => {
             const active = pathname === link.href;
             return (
@@ -71,7 +68,6 @@ export default function Navbar() {
             <button
               onClick={() => signOut()}
               className="ml-2 rounded-md px-3 py-1.5 text-sm font-medium text-rose-400 hover:bg-rose-950/50 hover:text-rose-300 transition-colors"
-              title={user.email ?? ""}
             >
               Sair
             </button>
@@ -79,9 +75,9 @@ export default function Navbar() {
         </nav>
       </div>
 
-      {/* Menu Dropdown no Mobile */}
+      {/* Menu Mobile Dropdown */}
       {isOpen && (
-        <div className="border-t border-walnut-800 bg-walnut-950/98 px-4 pb-4 pt-2 sm:hidden" id="mobile-menu">
+        <div className="border-t border-walnut-800 bg-walnut-950 px-4 pb-4 pt-2 md:hidden">
           <div className="flex flex-col gap-2">
             {links.map((link) => {
               const active = pathname === link.href;
