@@ -1,81 +1,101 @@
 "use client";
 
 import { useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
 export default function ImportPage() {
-  const [username, setUsername] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const router = useRouter();
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleImport = async (e: React.FormEvent) => {
+  const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) return;
+    if (!file) {
+      alert("Selecione um arquivo CSV primeiro.");
+      return;
+    }
 
     setLoading(true);
-    setMessage("");
+    const reader = new FileReader();
 
-    try {
-      const res = await fetch("/api/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim() }),
-      });
+    reader.onload = async (evt) => {
+      try {
+        const text = evt.target?.result as string;
+        const lines = text.split("\n").filter((l) => l.trim() !== "");
+        if (lines.length <= 1) {
+          alert("O arquivo CSV está vazio ou sem dados válidos.");
+          setLoading(false);
+          return;
+        }
 
-      const data = await res.json();
+        // Pula o cabeçalho
+        const rows = lines.slice(1);
+        const recordsToInsert = [];
 
-      if (!res.ok) {
-        throw new Error(data.error || "Erro ao importar coleção.");
+        for (const row of rows) {
+          const cols = row.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+          if (cols.length >= 2) {
+            recordsToInsert.push({
+              title: cols[0] || "Sem Título",
+              artist: cols[1] || "Artista Desconhecido",
+              year: cols[2] ? parseInt(cols[2]) || null : null,
+              genre: cols[3] || null,
+              format: cols[4] || "Vinil",
+              label: cols[5] || null,
+            });
+          }
+        }
+
+        if (recordsToInsert.length > 0) {
+          const { error } = await supabase.from("discs").insert(recordsToInsert);
+          if (error) {
+            alert("Erro ao importar CSV: " + error.message);
+          } else {
+            alert(`${recordsToInsert.length} discos importados com sucesso!`);
+            router.push("/");
+          }
+        }
+      } catch (err) {
+        alert("Erro ao processar arquivo CSV.");
+      } finally {
+        setLoading(false);
       }
+    };
 
-      setMessage(`Sucesso! ${data.count || 0} discos foram importados.`);
-      setTimeout(() => router.push("/"), 2000);
-    } catch (err: any) {
-      setMessage(`Erro: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
+    reader.readAsText(file);
   };
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-8">
-      <h1 className="font-display text-2xl font-bold text-parchment mb-2">
-        Importar do Discogs
-      </h1>
-      <p className="text-sm text-parchment/60 mb-6">
-        Digite seu nome de usuário do Discogs para sincronizar sua coleção.
-      </p>
-
-      <form onSubmit={handleImport} className="space-y-4 bg-walnut-900/60 p-6 rounded-2xl border border-walnut-800">
+    <div className="max-w-xl mx-auto py-12 px-4">
+      <div className="bg-[#1c1613] border border-[#3d2d26] rounded-2xl p-6 shadow-xl space-y-6">
         <div>
-          <label className="block text-xs font-medium text-parchment/80 mb-1.5">
-            Usuário do Discogs
-          </label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Ex: gabrielfoganholi"
-            className="w-full bg-walnut-950 border border-walnut-700 rounded-xl px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-amber-500"
-            required
-          />
+          <h1 className="font-display font-bold text-2xl text-parchment">Importar via CSV / Discogs</h1>
+          <p className="text-xs text-parchment/60 mt-1">
+            Selecione uma planilha CSV contendo o acervo da sua coleção.
+          </p>
         </div>
 
-        {message && (
-          <p className={`text-xs p-3 rounded-lg ${message.startsWith("Sucesso") ? "bg-emerald-950/80 text-emerald-400 border border-emerald-800" : "bg-rose-950/80 text-rose-400 border border-rose-800"}`}>
-            {message}
-          </p>
-        )}
+        <form onSubmit={handleFileUpload} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-parchment/80 mb-2">Arquivo CSV</label>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="block w-full text-xs text-parchment/70 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-500 file:text-walnut-950 hover:file:bg-amber-400 cursor-pointer"
+            />
+          </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-amber-500 hover:bg-amber-400 text-walnut-950 font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
-        >
-          {loading ? "Importando discos..." : "Iniciar Importação"}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-amber-500 hover:bg-amber-400 text-walnut-950 font-bold py-3 rounded-xl text-sm transition shadow-md"
+          >
+            {loading ? "Processando..." : "Carregar Planilha CSV"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

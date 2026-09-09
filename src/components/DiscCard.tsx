@@ -1,110 +1,112 @@
 "use client";
 
 import Link from "next/link";
-import { Disc, WishlistItem } from "@/lib/types";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-interface Props {
-  item: Disc | WishlistItem;
-  href: string;
-  badge?: string;
-  onToggleFavorite?: (id: string, next: boolean) => void;
+interface DiscCardProps {
+  disc: any;
+  onUpdate?: () => void;
 }
 
-function isDisc(item: Disc | WishlistItem): item is Disc {
-  return "favorite" in item;
-}
+export default function DiscCard({ disc, onUpdate }: DiscCardProps) {
+  const [isFavorite, setIsFavorite] = useState<boolean>(disc.is_favorite || false);
 
-export default function DiscCard({ item, href, badge, onToggleFavorite }: Props) {
-  const favorite = isDisc(item) && item.favorite;
-  const rating = isDisc(item) ? item.rating : null;
-
-  async function toggleFavorite(e: React.MouseEvent) {
+  const toggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!isDisc(item)) return;
-    const next = !item.favorite;
-    onToggleFavorite?.(item.id, next);
-    await supabase.from("discs").update({ favorite: next }).eq("id", item.id);
-  }
+
+    const previousState = isFavorite;
+    const nextState = !previousState;
+
+    // Atualização otimista da UI
+    setIsFavorite(nextState);
+
+    const { error } = await supabase
+      .from("discs")
+      .update({ is_favorite: nextState })
+      .eq("id", disc.id);
+
+    if (error) {
+      // Reverte o ícone caso o banco de dados rejeite a alteração
+      setIsFavorite(previousState);
+      alert("Erro ao atualizar favorito: " + error.message);
+      return;
+    }
+
+    if (onUpdate) onUpdate();
+  };
 
   return (
-    <Link
-      href={href}
-      className="group flex flex-col overflow-hidden rounded-lg border border-walnut-700 bg-walnut-900 transition-transform hover:-translate-y-0.5 hover:border-amber-500/60"
-    >
-      <div className="relative aspect-square w-full overflow-hidden bg-walnut-800">
-        {/* Disco de vinil escondido atrás da capa: aparece "saindo da capa" ao passar o mouse */}
-        <div className="absolute inset-0 flex translate-x-1 items-center justify-center">
-          <VinylPlaceholder className="h-[70%] w-[70%] text-walnut-700" />
-        </div>
-
-        <div className="absolute inset-0 transition-transform duration-300 ease-out group-hover:translate-x-3 group-hover:-translate-y-1 group-hover:rotate-1">
-          {item.cover_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
+    <div className="bg-[#1c1613] border border-[#3d2d26] rounded-2xl overflow-hidden hover:border-amber-500/50 transition group flex flex-col justify-between relative">
+      <div>
+        {/* IMAGEM DA CAPA */}
+        <div className="aspect-square w-full relative overflow-hidden bg-[#120e0c]">
+          {disc.cover_url ? (
             <img
-              src={item.cover_url}
-              alt={`Capa de ${item.title}`}
-              className="h-full w-full object-cover shadow-lg"
+              src={disc.cover_url}
+              alt={disc.title || "Capa do disco"}
+              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-walnut-800">
-              <VinylPlaceholder className="h-16 w-16 text-walnut-700" />
+            <div className="w-full h-full flex items-center justify-center text-4xl">
+              💿
             </div>
           )}
-        </div>
 
-        <span className="absolute left-2 top-2 rounded bg-walnut-950/80 px-2 py-0.5 text-xs text-parchment/80">
-          {item.format}
-        </span>
+          {/* BADGE DE FORMATO */}
+          {disc.format && (
+            <span className="absolute top-3 right-3 bg-amber-500/90 text-walnut-950 text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm">
+              {disc.format}
+            </span>
+          )}
 
-        {isDisc(item) && (
+          {/* BOTÃO FAVORITO */}
           <button
             onClick={toggleFavorite}
-            aria-label={favorite ? "Remover dos favoritos" : "Marcar como favorito"}
-            className="absolute right-2 top-2 rounded-full bg-walnut-950/80 p-1.5 text-amber-400 hover:bg-walnut-950"
+            className="absolute top-3 left-3 bg-black/60 hover:bg-black/80 text-sm p-1.5 rounded-full transition active:scale-90"
+            title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
           >
-            <svg viewBox="0 0 20 20" className={`h-4 w-4 ${favorite ? "fill-amber-400" : "fill-none stroke-amber-400 stroke-[1.5]"}`}>
-              <path d="M10 3.5c1.4-2 5.6-1.8 5.6 2 0 3-3 5.4-5.6 8-2.6-2.6-5.6-5-5.6-8 0-3.8 4.2-4 5.6-2z" />
-            </svg>
+            {isFavorite ? "⭐" : "🤍"}
           </button>
-        )}
+        </div>
 
-        {badge && (
-          <span className="absolute bottom-2 right-2 rounded bg-walnut-950/80 px-2 py-0.5 text-xs text-sage-400">
-            {badge}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col gap-1 p-3">
-        <span className="truncate font-display text-base text-parchment">
-          {item.title}
-        </span>
-        <span className="truncate text-sm text-parchment/70">
-          {item.artist}
-        </span>
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-parchment/40">
-            {item.year ?? "Ano desconhecido"}
-            {item.genre ? ` · ${item.genre}` : ""}
-          </span>
-          {rating ? (
-            <span className="text-xs text-amber-400">{"★".repeat(rating)}</span>
-          ) : null}
+        {/* INFORMAÇÕES */}
+        <div className="p-4 space-y-1">
+          <h3 className="font-bold text-parchment text-base line-clamp-1">
+            {disc.title || "Sem título"}
+          </h3>
+          <p className="text-xs text-parchment/70 font-medium line-clamp-1">
+            {disc.artist || "Artista desconhecido"}
+          </p>
+          <div className="flex items-center gap-2 pt-2 text-[11px] text-parchment/50">
+            {disc.year && <span>{disc.year}</span>}
+            {disc.year && disc.genre && <span>•</span>}
+            {disc.genre && (
+              <span className="bg-[#2a1f1a] px-2 py-0.5 rounded text-amber-500/90">
+                {disc.genre}
+              </span>
+            )}
+          </div>
         </div>
       </div>
-    </Link>
-  );
-}
 
-function VinylPlaceholder({ className }: { className: string }) {
-  return (
-    <svg viewBox="0 0 100 100" className={className}>
-      <circle cx="50" cy="50" r="46" fill="currentColor" />
-      <circle cx="50" cy="50" r="36" fill="none" stroke="#171009" strokeWidth="1" opacity="0.4" />
-      <circle cx="50" cy="50" r="26" fill="none" stroke="#171009" strokeWidth="1" opacity="0.4" />
-      <circle cx="50" cy="50" r="16" fill="#C9932F" />
-      <circle cx="50" cy="50" r="3" fill="#171009" />
-    </svg>
+      {/* AÇÕES DE NAVEGAÇÃO E EDIÇÃO */}
+      <div className="p-4 pt-0 flex items-center gap-2">
+        <Link
+          href={`/disc/${disc.id}`}
+          className="flex-1 bg-[#2a1f1a] hover:bg-[#3d2d26] text-parchment text-xs font-semibold py-2 rounded-xl text-center transition"
+        >
+          Ver Detalhes
+        </Link>
+        <Link
+          href={`/disc/${disc.id}/edit`}
+          className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 p-2 rounded-xl text-xs font-bold transition flex items-center justify-center"
+          title="Editar Cadastro"
+        >
+          ✏️
+        </Link>
+      </div>
+    </div>
   );
 }

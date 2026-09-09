@@ -1,53 +1,64 @@
 "use client";
 
-import { Disc } from "@/lib/types";
+import DiscCard from "./DiscCard";
+
+interface RandomPickModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  disc: any;
+  onPickAgain: () => void;
+}
 
 export default function RandomPickModal({
-  disc,
+  isOpen,
   onClose,
-  onReroll,
-}: {
-  disc: Disc;
-  onClose: () => void;
-  onReroll: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-walnut-950/90 p-4">
-      <div className="w-full max-w-sm rounded-lg border border-amber-500/40 bg-walnut-900 p-6 text-center">
-        <p className="mb-4 text-xs text-parchment/50">Hoje a sorte escolheu…</p>
+  disc,
+  onPickAgain,
+}: RandomPickModalProps) {
+  if (!isOpen) return null;
 
-        <div className="relative mx-auto mb-4 aspect-square w-48 overflow-hidden rounded-lg border border-walnut-700 bg-walnut-800">
-          {disc.cover_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={disc.cover_url}
-              alt={`Capa de ${disc.title}`}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-parchment/30">
-              Sem capa
-            </div>
-          )}
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-[#1c1613] border border-[#3d2d26] rounded-3xl p-6 max-w-sm w-full space-y-4 text-center relative shadow-2xl">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-parchment/60 hover:text-parchment text-lg font-bold"
+        >
+          ✕
+        </button>
+
+        <div>
+          <span className="text-3xl block mb-1">🎲</span>
+          <h2 className="font-display font-bold text-xl text-amber-500">
+            O que ouvir hoje?
+          </h2>
+          <p className="text-xs text-parchment/60">
+            A sorte escolheu este álbum do seu acervo:
+          </p>
         </div>
 
-        <p className="font-display text-xl text-parchment">{disc.title}</p>
-        <p className="mb-6 text-sm text-parchment/60">
-          {disc.artist} {disc.year ? `· ${disc.year}` : ""}
-        </p>
+        {disc ? (
+          <div className="pt-2">
+            <DiscCard disc={disc} />
+          </div>
+        ) : (
+          <p className="text-sm text-parchment/50 py-8">
+            Nenhum disco disponível para sorteio.
+          </p>
+        )}
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 pt-2">
           <button
-            onClick={onReroll}
-            className="flex-1 rounded-md border border-walnut-700 py-2 text-sm text-parchment hover:bg-walnut-800"
+            onClick={onPickAgain}
+            className="flex-1 bg-[#2a1f1a] hover:bg-[#3d2d26] text-parchment text-xs font-semibold py-2.5 rounded-xl transition"
           >
-            Sortear outro
+            Sortear Outro
           </button>
           <button
             onClick={onClose}
-            className="flex-1 rounded-md bg-amber-500 py-2 text-sm font-medium text-walnut-950 hover:bg-amber-400"
+            className="flex-1 bg-amber-500 hover:bg-amber-400 text-walnut-950 text-xs font-bold py-2.5 rounded-xl transition"
           >
-            Bora ouvir
+            Vou ouvir este!
           </button>
         </div>
       </div>

@@ -14,11 +14,11 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
-  children,
-}: {
+interface RootLayoutProps {
   children: React.ReactNode;
-}) {
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="pt-BR" className="overflow-x-hidden">
       <body className="bg-walnut-950 text-parchment min-h-screen overflow-x-hidden antialiased">
