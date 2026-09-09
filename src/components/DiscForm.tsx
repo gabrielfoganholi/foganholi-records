@@ -23,7 +23,7 @@ export default function DiscForm({
   const [results, setResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
 
-  // Campos do formulário preenchidos com initialData se estiver em modo de edição
+  // Estados do Formulário
   const [title, setTitle] = useState(initialData?.title || "");
   const [artist, setArtist] = useState(initialData?.artist || "");
   const [year, setYear] = useState(initialData?.year || "");
@@ -33,8 +33,18 @@ export default function DiscForm({
   const [barcode, setBarcode] = useState(initialData?.barcode || "");
   const [coverUrl, setCoverUrl] = useState(initialData?.cover_url || "");
   const [discogsId, setDiscogsId] = useState(initialData?.discogs_id || "");
-  const [mediaCondition, setMediaCondition] = useState(initialData?.media_condition || "VG+");
-  const [rating, setRating] = useState(initialData?.rating ? String(initialData.rating) : "5");
+  const [mediaCondition, setMediaCondition] = useState(
+    initialData?.media_condition || "VG+"
+  );
+  const [rating, setRating] = useState(
+    initialData?.rating ? String(initialData.rating) : "5"
+  );
+  const [purchasePrice, setPurchasePrice] = useState(
+    initialData?.purchase_price || ""
+  );
+  const [estimatedValue, setEstimatedValue] = useState(
+    initialData?.estimated_value || ""
+  );
   const [notes, setNotes] = useState(initialData?.notes || "");
   const [loading, setLoading] = useState(false);
 
@@ -45,7 +55,9 @@ export default function DiscForm({
     setSearching(true);
 
     try {
-      const res = await fetch(`/api/discogs/search?q=${encodeURIComponent(query)}`);
+      const res = await fetch(
+        `/api/discogs/search?q=${encodeURIComponent(query)}`
+      );
       const data = await res.json();
       setResults(data.results || []);
     } catch (err) {
@@ -78,22 +90,6 @@ export default function DiscForm({
       setBarcode(item.barcode[0]);
     }
 
-    if (item.id) {
-      try {
-        const res = await fetch(`/api/discogs/release?id=${item.id}`);
-        const details = await res.json();
-        if (details) {
-          if (details.artists?.[0]?.name) setArtist(details.artists[0].name);
-          if (details.title) setTitle(details.title);
-          if (details.genres?.[0]) setGenre(details.genres[0]);
-          if (details.labels?.[0]?.name) setLabel(details.labels[0].name);
-          if (details.images?.[0]?.resource_url) setCoverUrl(details.images[0].resource_url);
-        }
-      } catch (e) {
-        console.log("Usando dados básicos do Discogs.");
-      }
-    }
-
     setShowSearch(false);
   };
 
@@ -115,6 +111,8 @@ export default function DiscForm({
       discogs_id: discogsId || null,
       media_condition: mediaCondition || null,
       rating: rating ? parseInt(rating) : 5,
+      purchase_price: purchasePrice ? parseFloat(String(purchasePrice)) : 0,
+      estimated_value: estimatedValue ? parseFloat(String(estimatedValue)) : 0,
       notes: notes || null,
     };
 
@@ -138,7 +136,7 @@ export default function DiscForm({
         router.refresh();
       }
     } catch (err: any) {
-      alert("Erro ao salvar disco no banco de dados: " + err.message);
+      alert("Erro ao salvar no banco de dados: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -146,7 +144,7 @@ export default function DiscForm({
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
-      {/* Botões de Ação Externa */}
+      {/* Botões de Busca Externa */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button
           type="button"
@@ -171,12 +169,14 @@ export default function DiscForm({
         </button>
       </div>
 
-      {/* MODAL DE BUSCA NO DISCOGS */}
+      {/* Modal do Discogs */}
       {showSearch && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="w-full max-w-2xl bg-[#1c1613] border border-[#3d2d26] rounded-2xl p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-[#2a1f1a] pb-3">
-              <h3 className="font-display font-bold text-parchment text-lg">Buscar no Discogs</h3>
+              <h3 className="font-display font-bold text-parchment text-lg">
+                Buscar no Discogs
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowSearch(false)}
@@ -191,7 +191,7 @@ export default function DiscForm({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ex: Raul Seixas, Dark Side of the Moon, ou código..."
+                placeholder="Ex: Raul Seixas, Dark Side of the Moon..."
                 className="flex-1 bg-[#120e0c] border border-[#3d2d26] rounded-xl px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-amber-500"
               />
               <button
@@ -204,11 +204,6 @@ export default function DiscForm({
             </form>
 
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {results.length === 0 && !searching && (
-                <p className="text-center py-8 text-xs text-parchment/40">
-                  Digite o nome do artista, álbum ou código de barras acima.
-                </p>
-              )}
               {results.map((item) => (
                 <div
                   key={item.id}
@@ -225,7 +220,8 @@ export default function DiscForm({
                       {item.title}
                     </p>
                     <p className="text-xs text-parchment/60 truncate mt-0.5">
-                      {item.year || "Ano N/I"} • {item.format?.join(", ") || "Formato N/I"}
+                      {item.year || "Ano N/I"} •{" "}
+                      {item.format?.join(", ") || "Formato N/I"}
                     </p>
                   </div>
                   <button
@@ -241,15 +237,28 @@ export default function DiscForm({
         </div>
       )}
 
-      {/* FORMULÁRIO DE CADASTRO / EDIÇÃO */}
-      <form onSubmit={handleSubmit} className="bg-[#1c1613] border border-[#3d2d26] p-6 rounded-2xl space-y-5 shadow-xl">
+      {/* Formulário do Disco */}
+      <form
+        onSubmit={handleSubmit}
+        className="bg-[#1c1613] border border-[#3d2d26] p-6 rounded-2xl space-y-5 shadow-xl"
+      >
         <h2 className="font-display font-bold text-parchment text-lg border-b border-[#2a1f1a] pb-3">
-          {mode === "edit" ? "Editar Informações do Disco" : "Informações do Disco"}
+          {table === "wishlist"
+            ? mode === "edit"
+              ? "Editar Item da Wishlist"
+              : "Adicionar Item à Wishlist"
+            : mode === "edit"
+            ? "Editar Disco da Coleção"
+            : "Cadastrar Disco na Coleção"}
         </h2>
 
         {coverUrl && (
           <div className="flex items-center gap-4 bg-[#120e0c] p-3 rounded-xl border border-[#2a1f1a]">
-            <img src={coverUrl} alt="Capa" className="w-16 h-16 object-cover rounded-lg" />
+            <img
+              src={coverUrl}
+              alt="Capa"
+              className="w-16 h-16 object-cover rounded-lg"
+            />
             <div className="text-xs text-parchment/70 flex-1 truncate">
               <p className="font-semibold text-parchment">Capa Selecionada</p>
               <p className="truncate text-parchment/50">{coverUrl}</p>
@@ -266,7 +275,9 @@ export default function DiscForm({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-parchment/80 mb-1">Título do Disco *</label>
+            <label className="block text-xs font-semibold text-parchment/80 mb-1">
+              Título do Disco *
+            </label>
             <input
               type="text"
               value={title}
@@ -276,7 +287,9 @@ export default function DiscForm({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-parchment/80 mb-1">Artista / Banda *</label>
+            <label className="block text-xs font-semibold text-parchment/80 mb-1">
+              Artista / Banda *
+            </label>
             <input
               type="text"
               value={artist}
@@ -289,7 +302,9 @@ export default function DiscForm({
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-parchment/80 mb-1">Ano de Lançamento</label>
+            <label className="block text-xs font-semibold text-parchment/80 mb-1">
+              Ano de Lançamento
+            </label>
             <input
               type="number"
               value={year}
@@ -298,7 +313,9 @@ export default function DiscForm({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-parchment/80 mb-1">Formato</label>
+            <label className="block text-xs font-semibold text-parchment/80 mb-1">
+              Formato
+            </label>
             <select
               value={format}
               onChange={(e) => setFormat(e.target.value)}
@@ -311,7 +328,9 @@ export default function DiscForm({
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-parchment/80 mb-1">Gênero</label>
+            <label className="block text-xs font-semibold text-parchment/80 mb-1">
+              Gênero
+            </label>
             <input
               type="text"
               value={genre}
@@ -323,7 +342,9 @@ export default function DiscForm({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-parchment/80 mb-1">Gravadora / Selo</label>
+            <label className="block text-xs font-semibold text-parchment/80 mb-1">
+              Gravadora / Selo
+            </label>
             <input
               type="text"
               value={label}
@@ -332,7 +353,9 @@ export default function DiscForm({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-parchment/80 mb-1">Código de Barras</label>
+            <label className="block text-xs font-semibold text-parchment/80 mb-1">
+              Código de Barras
+            </label>
             <input
               type="text"
               value={barcode}
@@ -342,9 +365,43 @@ export default function DiscForm({
           </div>
         </div>
 
+        {/* VALORES FINANCEIROS (MERCADO E COMPRA) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#120e0c] p-4 rounded-xl border border-[#2a1f1a]">
+          <div>
+            <label className="block text-xs font-semibold text-amber-400 mb-1">
+              {table === "wishlist"
+                ? "Preço Esperado / Compra (R$)"
+                : "Valor Pago / Compra (R$)"}
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              placeholder="0.00"
+              className="w-full bg-[#1c1613] border border-[#3d2d26] rounded-xl px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-amber-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-amber-400 mb-1">
+              Valor Estimado de Mercado (R$)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={estimatedValue}
+              onChange={(e) => setEstimatedValue(e.target.value)}
+              placeholder="0.00"
+              className="w-full bg-[#1c1613] border border-[#3d2d26] rounded-xl px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-amber-500"
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-parchment/80 mb-1">Conservação da Mídia</label>
+            <label className="block text-xs font-semibold text-parchment/80 mb-1">
+              Conservação da Mídia
+            </label>
             <select
               value={mediaCondition}
               onChange={(e) => setMediaCondition(e.target.value)}
@@ -352,13 +409,19 @@ export default function DiscForm({
             >
               <option value="Mint (M)">Mint (M) - Novo / Perfeito</option>
               <option value="Near Mint (NM)">Near Mint (NM) - Quase Novo</option>
-              <option value="Very Good Plus (VG+)">Very Good Plus (VG+) - Excelente</option>
-              <option value="Very Good (VG)">Very Good (VG) - Bom Estado</option>
+              <option value="Very Good Plus (VG+)">
+                Very Good Plus (VG+) - Excelente
+              </option>
+              <option value="Very Good (VG)">
+                Very Good (VG) - Bom Estado
+              </option>
               <option value="Good (G)">Good (G) - Marcas Visíveis</option>
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-parchment/80 mb-1">Sua Avaliação (1 a 5 estrelas)</label>
+            <label className="block text-xs font-semibold text-parchment/80 mb-1">
+              Sua Avaliação (1 a 5 estrelas)
+            </label>
             <select
               value={rating}
               onChange={(e) => setRating(e.target.value)}
@@ -374,12 +437,14 @@ export default function DiscForm({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-parchment/80 mb-1">Anotações e Observações</label>
+          <label className="block text-xs font-semibold text-parchment/80 mb-1">
+            Anotações e Observações
+          </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="Edição especial, número de tiragem, observações da capa..."
+            placeholder="Edição especial, local onde comprou, conservação da capa..."
             className="w-full bg-[#120e0c] border border-[#3d2d26] rounded-xl px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-amber-500"
           ></textarea>
         </div>
@@ -391,8 +456,12 @@ export default function DiscForm({
         >
           {loading
             ? "Salvando..."
+            : table === "wishlist"
+            ? mode === "edit"
+              ? "Salvar Alterações na Wishlist"
+              : "Adicionar à Wishlist"
             : mode === "edit"
-            ? "Salvar Alterações"
+            ? "Salvar Alterações na Coleção"
             : "Salvar Disco na Coleção"}
         </button>
       </form>
