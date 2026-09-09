@@ -4,26 +4,38 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function DiscForm() {
+interface DiscFormProps {
+  initialData?: any;
+  mode?: "create" | "edit";
+  table?: "discs" | "wishlist";
+  onSuccess?: () => void;
+}
+
+export default function DiscForm({
+  initialData,
+  mode = "create",
+  table = "discs",
+  onSuccess,
+}: DiscFormProps) {
   const router = useRouter();
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
 
-  // Campos do formulário
-  const [title, setTitle] = useState("");
-  const [artist, setArtist] = useState("");
-  const [year, setYear] = useState("");
-  const [genre, setGenre] = useState("");
-  const [format, setFormat] = useState("Vinil");
-  const [label, setLabel] = useState("");
-  const [barcode, setBarcode] = useState("");
-  const [coverUrl, setCoverUrl] = useState("");
-  const [discogsId, setDiscogsId] = useState("");
-  const [mediaCondition, setMediaCondition] = useState("VG+");
-  const [rating, setRating] = useState("5");
-  const [notes, setNotes] = useState("");
+  // Campos do formulário preenchidos com initialData se estiver em modo de edição
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [artist, setArtist] = useState(initialData?.artist || "");
+  const [year, setYear] = useState(initialData?.year || "");
+  const [genre, setGenre] = useState(initialData?.genre || "");
+  const [format, setFormat] = useState(initialData?.format || "Vinil");
+  const [label, setLabel] = useState(initialData?.label || "");
+  const [barcode, setBarcode] = useState(initialData?.barcode || "");
+  const [coverUrl, setCoverUrl] = useState(initialData?.cover_url || "");
+  const [discogsId, setDiscogsId] = useState(initialData?.discogs_id || "");
+  const [mediaCondition, setMediaCondition] = useState(initialData?.media_condition || "VG+");
+  const [rating, setRating] = useState(initialData?.rating ? String(initialData.rating) : "5");
+  const [notes, setNotes] = useState(initialData?.notes || "");
   const [loading, setLoading] = useState(false);
 
   // Busca na API do Discogs
@@ -66,7 +78,6 @@ export default function DiscForm() {
       setBarcode(item.barcode[0]);
     }
 
-    // Tenta buscar mais detalhes da release se houver ID
     if (item.id) {
       try {
         const res = await fetch(`/api/discogs/release?id=${item.id}`);
@@ -79,7 +90,7 @@ export default function DiscForm() {
           if (details.images?.[0]?.resource_url) setCoverUrl(details.images[0].resource_url);
         }
       } catch (e) {
-        console.log("Não foi possível carregar detalhes adicionais, usando dados básicos.");
+        console.log("Usando dados básicos do Discogs.");
       }
     }
 
@@ -90,29 +101,51 @@ export default function DiscForm() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.from("discs").insert([
-      {
-        title,
-        artist,
-        year: year ? parseInt(year) : null,
-        genre,
-        format,
-        label,
-        barcode,
-        cover_url: coverUrl,
-        discogs_id: discogsId,
-        media_condition: mediaCondition,
-        rating: rating ? parseInt(rating) : 5,
-        notes,
-      },
-    ]);
+    const targetTable = table || "discs";
 
-    setLoading(false);
+    const payload = {
+      title,
+      artist,
+      year: year ? parseInt(String(year)) : null,
+      genre: genre || null,
+      format: format || "Vinil",
+      label: label || null,
+      barcode: barcode || null,
+      cover_url: coverUrl || null,
+      discogs_id: discogsId || null,
+      media_condition: mediaCondition || null,
+      rating: rating ? parseInt(rating) : 5,
+      notes: notes || null,
+    };
 
-    if (error) {
-      alert("Erro ao salvar disco no banco de dados: " + error.message);
-    } else {
-      router.push("/");
+    try {
+      if (mode === "edit" && initialData?.id) {
+        const { error } = await supabase
+          .from(targetTable)
+          .update(payload)
+          .eq("id", initialData.id);
+
+        if (error) throw error;
+      } else {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          (payload as any).user_id = userData.user.id;
+        }
+
+        const { error } = await supabase.from(targetTable).insert([payload]);
+        if (error) throw error;
+      }
+
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push(targetTable === "wishlist" ? "/wishlist" : "/");
+        router.refresh();
+      }
+    } catch (err: any) {
+      alert("Erro ao salvar disco no banco de dados: " + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -213,10 +246,10 @@ export default function DiscForm() {
         </div>
       )}
 
-      {/* FORMULÁRIO DE CADASTRO COM DADOS ROBUSTOS */}
+      {/* FORMULÁRIO DE CADASTRO / EDIÇÃO */}
       <form onSubmit={handleSubmit} className="bg-[#1c1613] border border-[#3d2d26] p-6 rounded-2xl space-y-5 shadow-xl">
         <h2 className="font-display font-bold text-parchment text-lg border-b border-[#2a1f1a] pb-3">
-          Informações do Disco
+          {mode === "edit" ? "Editar Informações do Disco" : "Informações do Disco"}
         </h2>
 
         {coverUrl && (
@@ -324,7 +357,6 @@ export default function DiscForm() {
             >
               <option value="Mint (M)">Mint (M) - Novo / Perfeito</option>
               <option value="Near Mint (NM)">Near Mint (NM) - Quase Novo</option>
-
               <option value="Very Good Plus (VG+)">Very Good Plus (VG+) - Excelente</option>
               <option value="Very Good (VG)">Very Good (VG) - Bom Estado</option>
               <option value="Good (G)">Good (G) - Marcas Visíveis</option>
@@ -360,9 +392,13 @@ export default function DiscForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-amber-500 hover:bg-amber-400 text-walnut-950 font-bold py-3.5 rounded-xl text-sm transition shadow-md"
+          className="w-full bg-amber-500 hover:bg-amber-400 text-walnut-950 font-bold py-3.5 rounded-xl text-sm transition shadow-md disabled:opacity-50"
         >
-          {loading ? "Salvando no Acervo..." : "Salvar Disco na Coleção"}
+          {loading
+            ? "Salvando..."
+            : mode === "edit"
+            ? "Salvar Alterações"
+            : "Salvar Disco na Coleção"}
         </button>
       </form>
     </div>
