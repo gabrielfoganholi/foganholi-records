@@ -40,15 +40,15 @@ export default function DiscForm({
     initialData?.rating ? String(initialData.rating) : "5"
   );
   const [purchasePrice, setPurchasePrice] = useState(
-    initialData?.purchase_price || ""
+    initialData?.purchase_price ?? ""
   );
   const [estimatedValue, setEstimatedValue] = useState(
-    initialData?.estimated_value || ""
+    initialData?.estimated_value ?? ""
   );
   const [notes, setNotes] = useState(initialData?.notes || "");
   const [loading, setLoading] = useState(false);
 
-  // Busca na API do Discogs
+  // Busca no Discogs
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -67,7 +67,6 @@ export default function DiscForm({
     }
   };
 
-  // Seleciona o disco do Discogs e preenche os campos do formulário
   const handleSelectDisc = async (item: any) => {
     let itemTitle = item.title || "";
     let itemArtist = "";
@@ -144,7 +143,6 @@ export default function DiscForm({
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
-      {/* Botões de Busca Externa */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button
           type="button"
@@ -169,7 +167,6 @@ export default function DiscForm({
         </button>
       </div>
 
-      {/* Modal do Discogs */}
       {showSearch && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="w-full max-w-2xl bg-[#1c1613] border border-[#3d2d26] rounded-2xl p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
@@ -237,7 +234,6 @@ export default function DiscForm({
         </div>
       )}
 
-      {/* Formulário do Disco */}
       <form
         onSubmit={handleSubmit}
         className="bg-[#1c1613] border border-[#3d2d26] p-6 rounded-2xl space-y-5 shadow-xl"
@@ -365,12 +361,11 @@ export default function DiscForm({
           </div>
         </div>
 
-        {/* VALORES FINANCEIROS (MERCADO E COMPRA) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#120e0c] p-4 rounded-xl border border-[#2a1f1a]">
           <div>
-            <label className="block text-xs font-semibold text-amber-400 mb-1">
+            <label className="block text-xs font-semibold text-emerald-400 mb-1">
               {table === "wishlist"
-                ? "Preço Esperado / Compra (R$)"
+                ? "Preço Alvo / Meta (R$)"
                 : "Valor Pago / Compra (R$)"}
             </label>
             <input
@@ -444,7 +439,7 @@ export default function DiscForm({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="Edição especial, local onde comprou, conservação da capa..."
+            placeholder="Edição especial, local onde comprou/pretende comprar..."
             className="w-full bg-[#120e0c] border border-[#3d2d26] rounded-xl px-4 py-2.5 text-sm text-parchment focus:outline-none focus:border-amber-500"
           ></textarea>
         </div>
