@@ -27,29 +27,26 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Botão Hambúrguer (Forçado via CSS para telas < 768px) */}
+        {/* Botão Hambúrguer - Visível por padrão em telas pequenas */}
         <button
           onClick={() => setIsOpen(!isOpen)}
           type="button"
-          aria-label="Abrir menu de navegação"
-          aria-expanded={isOpen}
-          className="inline-flex items-center justify-center rounded-lg p-2 text-parchment/80 hover:bg-walnut-800 hover:text-parchment focus:outline-none md:hidden"
+          aria-label="Menu"
+          className="block sm:hidden rounded-lg p-2 text-parchment/80 hover:bg-walnut-800 hover:text-parchment focus:outline-none"
         >
           {isOpen ? (
-            /* Ícone X */
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            /* Ícone Hambúrguer ≡ */
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           )}
         </button>
 
-        {/* Links Desktop (Visível apenas em telas ≥ 768px) */}
-        <nav className="hidden items-center gap-1 md:flex">
+        {/* Links do Desktop - Escondidos no mobile */}
+        <nav className="hidden sm:flex items-center gap-1">
           {links.map((link) => {
             const active = pathname === link.href;
             return (
@@ -77,9 +74,9 @@ export default function Navbar() {
         </nav>
       </div>
 
-      {/* Menu Mobile Dropdown (Aberto quando isOpen === true em telas < 768px) */}
+      {/* Menu Mobile Dropdown */}
       {isOpen && (
-        <div className="border-t border-walnut-800 bg-walnut-950 px-4 pb-4 pt-2 md:hidden">
+        <div className="block sm:hidden border-t border-walnut-800 bg-walnut-950 px-4 pb-4 pt-2">
           <div className="flex flex-col gap-2">
             {links.map((link) => {
               const active = pathname === link.href;
