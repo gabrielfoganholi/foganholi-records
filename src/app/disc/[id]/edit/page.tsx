@@ -68,57 +68,77 @@ export default function EditDiscPage() {
     fetchDisc();
   }, [params?.id]);
 
-  // FUNÇÃO MÁGICA: Puxa todas as informações e a capa via API do Discogs
+  // FUNÇÃO MÁGICA: Busca em cascata (iTunes + API interna) para garantir capa HD e metadados
   const handleAutoFillDiscogs = async () => {
     if (!formData.title && !formData.artist) {
-      alert("Preencha ao menos o Título ou Artista para buscar no Discogs.");
+      alert("Preencha ao menos o Título ou Artista para buscar.");
       return;
     }
 
     setFetchingDiscogs(true);
+
     try {
       const query = encodeURIComponent(`${formData.artist} ${formData.title}`);
-      
-      // Tenta buscar usando a rota interna de API do seu projeto
-      let res = await fetch(`/api/discogs?q=${query}`);
-      let data = null;
 
-      if (res.ok) {
-        data = await res.json();
-      } else {
-        // Fallback para rota /api/search se existir
-        res = await fetch(`/api/search?q=${query}`);
-        if (res.ok) data = await res.json();
+      // 1. Tenta via iTunes Search API (Sem necessidade de token, rápida e capas HD)
+      const itunesRes = await fetch(
+        `https://itunes.apple.com/search?term=${query}&entity=album&limit=1`
+      );
+
+      if (itunesRes.ok) {
+        const itunesData = await itunesRes.json();
+        const result = itunesData.results?.[0];
+
+        if (result) {
+          const rawArtwork = result.artworkUrl100 || "";
+          const hdArtwork = rawArtwork.replace("100x100bb", "600x600bb");
+          const releaseYear = result.releaseDate ? result.releaseDate.substring(0, 4) : formData.year;
+
+          setFormData((prev) => ({
+            ...prev,
+            title: result.collectionName || prev.title,
+            artist: result.artistName || prev.artist,
+            cover_url: hdArtwork || prev.cover_url,
+            year: releaseYear || prev.year,
+            genre: result.primaryGenreName || prev.genre,
+          }));
+
+          alert("✨ Informações e capa encontradas e atualizadas com sucesso!");
+          setFetchingDiscogs(false);
+          return;
+        }
       }
 
-      const result = data?.results?.[0] || data?.[0] || data;
+      // 2. Se falhar, tenta via Rota Interna da API do Discogs
+      const internalRes = await fetch(`/api/discogs?q=${query}`);
+      if (internalRes.ok) {
+        const internalData = await internalRes.json();
+        const result = internalData?.results?.[0] || internalData?.[0] || internalData;
 
-      if (result) {
-        // Extrai as informações encontradas
-        const foundTitle = result.title ? result.title.split(" - ")[1] || result.title : formData.title;
-        const foundArtist = result.title && result.title.includes(" - ") ? result.title.split(" - ")[0] : formData.artist;
-        const foundCover = result.cover_image || result.thumb || formData.cover_url;
-        const foundYear = result.year ? String(result.year) : formData.year;
-        const foundGenre = Array.isArray(result.genre) ? result.genre[0] : (result.genre || formData.genre);
-        const foundLabel = Array.isArray(result.label) ? result.label[0] : (result.label || formData.label);
+        if (result) {
+          const foundTitle = result.title && result.title.includes(" - ") ? result.title.split(" - ")[1] : result.title;
+          const foundArtist = result.title && result.title.includes(" - ") ? result.title.split(" - ")[0] : formData.artist;
 
-        setFormData((prev) => ({
-          ...prev,
-          title: foundTitle || prev.title,
-          artist: foundArtist || prev.artist,
-          cover_url: foundCover || prev.cover_url,
-          year: foundYear || prev.year,
-          genre: foundGenre || prev.genre,
-          label: foundLabel || prev.label,
-        }));
+          setFormData((prev) => ({
+            ...prev,
+            title: foundTitle || prev.title,
+            artist: foundArtist || prev.artist,
+            cover_url: result.cover_image || result.thumb || prev.cover_url,
+            year: result.year ? String(result.year) : prev.year,
+            genre: Array.isArray(result.genre) ? result.genre[0] : (result.genre || prev.genre),
+            label: Array.isArray(result.label) ? result.label[0] : (result.label || prev.label),
+          }));
 
-        alert("✨ Informações e capa atualizadas com sucesso via Discogs!");
-      } else {
-        alert("Nenhum resultado correspondente foi encontrado no Discogs.");
+          alert("✨ Informações atualizadas via Discogs!");
+          setFetchingDiscogs(false);
+          return;
+        }
       }
+
+      alert("Nenhum resultado correspondente foi encontrado.");
     } catch (err: any) {
-      console.error("Erro ao buscar no Discogs:", err);
-      alert("Erro ao conectar com o serviço de busca do Discogs.");
+      console.error("Erro ao buscar dados:", err);
+      alert("Erro ao conectar com o serviço de busca.");
     } finally {
       setFetchingDiscogs(false);
     }
@@ -208,11 +228,11 @@ export default function EditDiscPage() {
         <h1 className="text-xl font-bold font-display text-parchment">Editar Disco</h1>
       </div>
 
-      {/* BOTÃO DE PREENCHIMENTO AUTOMÁTICO DISCOGS */}
+      {/* BOTÃO DE PREENCHIMENTO AUTOMÁTICO */}
       <div className="bg-[#1c1613] border border-amber-500/30 p-4 rounded-2xl flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-amber-400">Preenchimento Automático</p>
-          <p className="text-xs text-parchment/60">Busca foto, ano, gênero e gravadora direto do Discogs</p>
+          <p className="text-xs text-parchment/60">Busca foto, ano e gênero automaticamente</p>
         </div>
         <button
           type="button"
@@ -220,7 +240,7 @@ export default function EditDiscPage() {
           disabled={fetchingDiscogs}
           className="bg-amber-500 hover:bg-amber-400 text-walnut-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow-md whitespace-nowrap disabled:opacity-50"
         >
-          {fetchingDiscogs ? "Buscando..." : "✨ Preencher via Discogs"}
+          {fetchingDiscogs ? "Buscando..." : "✨ Preencher Automático"}
         </button>
       </div>
 
