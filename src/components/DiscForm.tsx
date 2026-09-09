@@ -103,7 +103,7 @@ export default function DiscForm({
 
     const targetTable = table || "discs";
 
-    const payload = {
+    const payload: Record<string, any> = {
       title,
       artist,
       year: year ? parseInt(String(year)) : null,
@@ -127,11 +127,6 @@ export default function DiscForm({
 
         if (error) throw error;
       } else {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user) {
-          (payload as any).user_id = userData.user.id;
-        }
-
         const { error } = await supabase.from(targetTable).insert([payload]);
         if (error) throw error;
       }
